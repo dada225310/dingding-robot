@@ -11,12 +11,16 @@ import com.aliyun.dingtalkrobot_1_0.models.BatchSendOTOResponse;
 import com.aliyun.tea.TeaException;
 import com.aliyun.teautil.models.RuntimeOptions;
 import lombok.extern.slf4j.Slf4j;
+import org.example.config.CaffeineCache;
+import org.example.vo.DialogInfo;
+import org.example.vo.UserRoleEnum;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Objects;
 
 @Slf4j
@@ -24,6 +28,9 @@ import java.util.Objects;
 public class RobotPrivateMessageService {
     private Client robotClient;
     private final AccessTokenService accessTokenService;
+
+    @Autowired
+    private CaffeineCache caffeineCache;
 
     @Autowired
     private DialogService dialogService;
@@ -59,11 +66,12 @@ public class RobotPrivateMessageService {
 
         JSONObject msgParam = new JSONObject();
         //连续对话
-        //dialogService.multiTurn(userId, text);
-        String replyAI = chatWithAI(text);
+        ArrayList<DialogInfo> dialogInfos = dialogService.multiTurn(userId, text);
+        //ArrayList<DialogInfo> dialogInfos = new ArrayList<>();
+        //dialogInfos.add(new DialogInfo(UserRoleEnum.USER.getRole(), text));
 
-        //加入历史对话
-        //dialogService.addHistory(userId, text, replyAI);
+        String replyAI = chatWithAI(userId, text, dialogInfos);
+
         msgParam.put("content", replyAI);
         batchSendOTORequest.setMsgParam(msgParam.toJSONString());
 
@@ -89,19 +97,20 @@ public class RobotPrivateMessageService {
     /**
      * 与AI聊天
      */
-    private String chatWithAI(String text) {
+    private String chatWithAI(String userId, String text, ArrayList<DialogInfo> dialogs) {
         if (StrUtil.isBlank(text)) {
             return "请输入要回复的内容";
         }
         //调用模型
         JSONObject params = new JSONObject();
-        params.put("prompt", text);
-        String jsonParam = JSON.toJSONString(params);
+        params.put("prompt", JSON.toJSONString(dialogs));
 
         String result = null;
         try {
             long start = System.currentTimeMillis();
-            result = HttpUtil.post(url, jsonParam, timeout);
+            log.info("===========模型调用开始,用户:{},多轮对话消息:{}=================",userId, JSON.toJSONString(dialogs));
+
+            result = HttpUtil.post(url, JSON.toJSONString(params), timeout);
             long end = System.currentTimeMillis();
             //转成毫秒
             log.info("模型调用耗时:{}ms", end - start);
@@ -112,18 +121,28 @@ public class RobotPrivateMessageService {
             String[] parts = dupResponse.split("</think>", 2);
             String simpleResp = parts.length > 1 ? parts[1].trim() : dupResponse;
 
-            //
-            log.info("time:{},用户提问:{},模型结果:{}", LocalDateTime.now(), text, simpleResp);
+            //添加到对话缓存中
+            dialogService.addAIHistory(userId, simpleResp);
+            log.info("模型调用结束,time:{},用户:{},提问:{},模型过滤结果:{}", LocalDateTime.now(), userId, text, simpleResp);
             return simpleResp;
 
         } catch (Exception e) {
+            String errorMessage;
+
+            // 判断异常类型并设置错误信息
             if (e instanceof com.alibaba.fastjson.JSONException) {
-                log.error("模型结果解析异常,path:{},que:{},error:{}", url, text, e.getMessage());
-                return "模型结果解析异常";
+                log.error("模型结果解析异常, path: {}, que: {}, error: {}", url, text, e.getMessage());
+                errorMessage = "模型结果解析异常";
             } else {
-                log.error("模型调用失败,path:{},que:{},error:{}", url, text, e.getMessage());
-                return "模型调用失败";
+                log.error("模型调用失败, path: {}, que: {}, error: {}", url, text, e.getMessage());
+                errorMessage = "模型调用失败";
             }
+
+            // 删除最后一条对话记录
+            dialogService.deleteLast(userId);
+
+            // 返回错误信息
+            return errorMessage;
         }
     }
 

@@ -73,6 +73,7 @@ public class AccessTokenService {
 
     /**
      * schedule for refresh token when expired
+     * 每分钟检查token是否快过期，否则续期
      */
     @Scheduled(fixedRate = 60 * 1000)
     public void checkAccessToken() {
