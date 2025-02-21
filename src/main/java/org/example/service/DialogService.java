@@ -15,6 +15,10 @@ public class DialogService {
 
     @Autowired
     private CaffeineCache caffeineCache;
+
+    /**
+     * 多轮对话
+     */
     public ArrayList<DialogInfo> multiTurn(String userId, String text) {
 
         DialogInfo dialogUser = DialogInfo.toUserInfo(text);
@@ -53,6 +57,16 @@ public class DialogService {
         caffeineCache.getCache().put(userId, list);
     }
 
-    //多轮对话
+    /**
+     * 识别推送的重复消息
+     */
+    public Boolean isDul(String msgId) {
+        String ifPresent = caffeineCache.getDulCache().getIfPresent(msgId);
+        if (ifPresent != null) {
+            return true;
+        }
+        caffeineCache.getDulCache().put(msgId, "1");
+        return false;
+    }
 
 }

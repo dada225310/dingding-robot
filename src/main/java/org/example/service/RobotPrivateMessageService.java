@@ -13,7 +13,6 @@ import com.aliyun.teautil.models.RuntimeOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.example.config.CaffeineCache;
 import org.example.vo.DialogInfo;
-import org.example.vo.UserRoleEnum;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -55,7 +54,7 @@ public class RobotPrivateMessageService {
         robotClient = new Client(config);
     }
 
-    public String send(String text,String userId) throws Exception {
+    public String send(String text,String userId,String msgId) throws Exception {
         BatchSendOTOHeaders batchSendOTOHeaders = new BatchSendOTOHeaders();
         batchSendOTOHeaders.setXAcsDingtalkAccessToken(accessTokenService.getAccessToken());
         BatchSendOTORequest batchSendOTORequest = new BatchSendOTORequest();
@@ -65,14 +64,16 @@ public class RobotPrivateMessageService {
         batchSendOTORequest.setUserIds(java.util.Arrays.asList(userId));
 
         JSONObject msgParam = new JSONObject();
-        //连续对话
-        ArrayList<DialogInfo> dialogInfos = dialogService.multiTurn(userId, text);
-        //ArrayList<DialogInfo> dialogInfos = new ArrayList<>();
-        //dialogInfos.add(new DialogInfo(UserRoleEnum.USER.getRole(), text));
-
-        String replyAI = chatWithAI(userId, text, dialogInfos);
-
-        msgParam.put("content", replyAI);
+        //是否为重复消息
+        if (dialogService.isDul(msgId)) {
+            //msgParam.put("content", "");
+            return null;
+        } else {
+            //连续对话
+            ArrayList<DialogInfo> dialogInfos = dialogService.multiTurn(userId, text);
+            String replyAI = chatWithAI(userId, text, dialogInfos);
+            msgParam.put("content", replyAI);
+        }
         batchSendOTORequest.setMsgParam(msgParam.toJSONString());
 
 

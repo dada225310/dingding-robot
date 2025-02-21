@@ -29,5 +29,21 @@ public class CaffeineCache {
                 .build();
     }
 
+    /**
+     * 存储重复消息
+     * 钉钉在长时间没有回复后，会再次推送消息
+     */
+    @Bean
+    public Cache<String, String> getDulCache() {
+        return Caffeine.newBuilder()
+                // 设置最后一次写入或访问后经过固定时间过期
+                .expireAfterWrite(180, TimeUnit.SECONDS)
+                // 初始的缓存空间大小
+                .initialCapacity(100)
+                // 缓存的最大条数
+                .maximumSize(1000)
+                .build();
+    }
+
 }
 
