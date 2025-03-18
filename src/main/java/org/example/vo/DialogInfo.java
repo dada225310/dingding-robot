@@ -12,19 +12,19 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class DialogInfo {
     private String user = UserRoleEnum.USER.getRole();
-    private String prompt;
+    private String query;
 
     public static DialogInfo toUserInfo(String prompt) {
         DialogInfo info = new DialogInfo();
         info.setUser(UserRoleEnum.USER.getRole());
-        info.setPrompt(prompt);
+        info.setQuery(prompt);
         return info;
     }
 
     public static DialogInfo toAssistantInfo(String prompt) {
         DialogInfo info = new DialogInfo();
         info.setUser(UserRoleEnum.ASSISTANT.getRole());
-        info.setPrompt(prompt);
+        info.setQuery(prompt);
         return info;
     }
 }

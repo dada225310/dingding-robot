@@ -1,0 +1,18 @@
+
+# 张雷启动
+nohup java -jar stream_robot_group_message_quick_start_jar/stream-robot-group-message-quick-start.jar --spring.profiles.active=zhanglei --ai.url=http://127.0.0.1:80/chat  --ai.dialog.expire=300 > app.log 2>&1 &
+
+
+# 自启动路径
+sudo nano /etc/systemd/system/dingding-robot.service
+# 重新加载 systemd 配置以识别新的服务
+sudo systemctl daemon-reload
+# 启动服务
+sudo systemctl start dingding-robot.service
+sudo systemctl enable dingding-robot.service
+
+#启动服务后，可以查看服务状态以确认其运行情况
+sudo systemctl status dingding-robot.service
+
+
+

@@ -104,7 +104,7 @@ public class RobotPrivateMessageService {
         }
         //调用模型
         JSONObject params = new JSONObject();
-        params.put("prompt", JSON.toJSONString(dialogs));
+        params.put("query", JSON.toJSONString(dialogs));
 
         String result = null;
         try {
